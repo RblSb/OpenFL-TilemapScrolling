@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+	<meta title="TilemapScrolling" package="org.mssite.tilemap" version="0.1.0" build-number="1" company="RblSb" />
+	
+	<app main="Main" preloader="Main" path="bin" file="tilemap" />
+	
+	<window background="#F0F0F0" fps="60" antialiasing="1" vsync="true" />
+	<window width="800" height="600" if="desktop" />
+	<window width="0" height="0" if="html5" />
+	<window orientation="landscape" if="cpp" />
+	
+	<source path="src" />
+	<haxelib name="openfl" />
+
+	<assets path="res" include="tiles.json" />
+	<assets path="res/maps" rename="maps" include="*" />
+	<assets path="res/tiles" rename="tiles" include="*" />
+	
+	<!-- Dead Code Elimination -->
+	<haxeflag name="-dce full" />
+</project>
