@@ -2,6 +2,7 @@ package;
 
 import openfl.display.BitmapData;
 import openfl.display.Bitmap;
+import openfl.display.Sprite;
 import openfl.display.Tilemap;
 import openfl.display.Tileset;
 import openfl.display.Tile;
@@ -28,15 +29,17 @@ typedef GameMap = { //map format
 class Lvl {
 	
 	public static var tilemap:Tilemap;
+	public static var debug = new Sprite();
 	public static var origTileset:BitmapData;
 	public static var origTsize:Int; //for rescaling
-	public static var tiles:Array<Tile> = []; //all tiles
 	public static var layersLength:Array<Int>;
 	public static var layersNum:Int;
 	public static var map:GameMap;
 	
-	public static var screen:Array<Array<Array<Tile>>> = [];
-	public static var screenW = 0; //tiles on screen
+	public static var tiles:Array<Array<Array<Tile>>> = [];
+	public static var tilesW = 0; //tiles viewport
+	public static var tilesH = 0;
+	public static var screenW = 0; //size in tiles
 	public static var screenH = 0;
 	public static var tsize = 0; //tile size
 	public static var scale = 0; //tile scale
@@ -50,8 +53,11 @@ class Lvl {
 	public static function init():Void {
 		initTiles();
 		loadMap(1);
-		
 		resize();
+		
+		#if debug
+		Lib.current.stage.addChild(debug);
+		#end
 	}
 	
 	private static function initTiles():Void {
@@ -89,7 +95,7 @@ class Lvl {
 		#if debug
 		var bitmap = new Bitmap(origTileset);
 		bitmap.alpha = 0.2;
-		stage.addChild(bitmap);
+		debug.addChild(bitmap);
 		#end
 	}
 	
@@ -98,7 +104,7 @@ class Lvl {
 		map = haxe.Json.parse(text);
 		
 		tilemap.removeTiles();
-		for (l in 0...layersNum) screen[l] = [];
+		for (l in 0...layersNum) tiles[l] = [];
 	}
 	
 	public static function getTile(layer:Int, x:Int, y:Int):Int {
@@ -110,7 +116,7 @@ class Lvl {
 	
 	public static function setTile(layer:Int, id:Int, x:Int, y:Int):Void {
 		if (x > -1 && y > -1 && x < map.w && y < map.h) {
-			map.layers[layer][y][x] = id;
+			map.layers[layer][y][x] = id + layersLength[layer];
 		}
 	}
 	
@@ -122,17 +128,24 @@ class Lvl {
 		var offx = camera.x % tsize;
 		var offy = camera.y % tsize;
 		
+		//tiles offset
+		var tx = -ctx < 1 ? 0 : -ctx-1;
+		var ty = -cty < 1 ? 0 : -cty-1;
+		if (tx > screenW-tilesW) tx = screenW-tilesW;
+		if (ty > screenH-tilesH) ty = screenH-tilesH;
+		
 		for (l in 0...layersNum)
-			for (iy in 0...screenH)
-				for (ix in 0...screenW) {
-					var id = getTile(l, ix + ctx, iy + cty);
+			for (iy in 0...tilesH)
+				for (ix in 0...tilesW) {
+					var id = getTile(l, ix+tx + ctx, iy+ty + cty);
 					
-					screen[l][iy][ix].id = id;
-					if (id == 0) screen[l][iy][ix].visible = false;
-					else screen[l][iy][ix].visible = true;
-					
-					screen[l][iy][ix].x = ix*tsize - offx;
-					screen[l][iy][ix].y = iy*tsize - offy;
+					if (id == 0) tiles[l][iy][ix].visible = false;
+					else {
+						tiles[l][iy][ix].id = id;
+						tiles[l][iy][ix].visible = true;
+						tiles[l][iy][ix].x = (ix+tx)*tsize - offx;
+						tiles[l][iy][ix].y = (iy+ty)*tsize - offy;
+					}
 				}
 		
 		camera.sx = camera.x;
@@ -140,84 +153,90 @@ class Lvl {
 	}
 	
 	public static function resize():Void {
-		var stage = Lib.current.stage;
+		var stage = Lib.current.stage; //fix camera resize
 		//new screen size in tiles
-		var newW = Math.ceil(stage.stageWidth/tsize) + 1;
-		var newH = Math.ceil(stage.stageHeight/tsize) + 1;
+		screenW = Math.ceil(stage.stageWidth/tsize) + 1;
+		screenH = Math.ceil(stage.stageHeight/tsize) + 1;
+		//set viewport
+		var newW = screenW > map.w ? map.w + 1 : screenW;
+		var newH = screenH > map.h ? map.h + 1 : screenH;
 		//camera in tiles
 		var ctx = Std.int(camera.x/tsize);
 		var cty = Std.int(camera.y/tsize);
 		var offx = camera.x % tsize;
 		var offy = camera.y % tsize;
 		
-		if (newW > screenW) { //w++
+		if (newW > tilesW) { //w++
 			
 			for (l in 0...layersNum)
-			for (ix in screenW...newW)
-				for (iy in 0...screenH) { //for old h
+			for (ix in tilesW...newW)
+				for (iy in 0...tilesH) { //for old h
 					var id = getTile(l, ix+ctx, iy+cty);
 					
-					screen[l][iy].push(new Tile(id, ix*tsize-offx, iy*tsize-offy));
-					if (id == 0) screen[l][iy][ix].visible = false;
+					tiles[l][iy].push(new Tile(id, ix*tsize-offx, iy*tsize-offy));
+					if (id == 0) tiles[l][iy][ix].visible = false;
 					
-					tilemap.addTile(screen[l][iy][ix]); //iy*screenH+ix
+					tilemap.addTile(tiles[l][iy][ix]); //iy*tilesH+ix
 				}
 			
-		} else if (newW < screenW) { //w--
+		} else if (newW < tilesW) { //w--
 			
 			for (l in 0...layersNum)
-			for (ix in newW...screenW)
-				for (iy in 0...screenH) { //for old h
-					tilemap.removeTile(screen[l][iy][ix]); //iy*screenH+newW
+			for (ix in newW...tilesW)
+				for (iy in 0...tilesH) { //for old h
+					tilemap.removeTile(tiles[l][iy][ix]); //iy*tilesH+newW
 				}
 			
 			for (l in 0...layersNum)
-			for (ix in newW...screenW)
-				for (iy in 0...screenH) {
-					screen[l][iy].pop();
+			for (ix in newW...tilesW)
+				for (iy in 0...tilesH) {
+					tiles[l][iy].pop();
 				}
 		}
 		
-		if (newH > screenH) { //h++
+		if (newH > tilesH) { //h++
 			
 			for (l in 0...layersNum)
-			for (iy in screenH...newH) {
-				screen[l].push([]);
+			for (iy in tilesH...newH) {
+				tiles[l].push([]);
 				for (ix in 0...newW) {
 					var id = getTile(l, ix+ctx, iy+cty);
 					
-					screen[l][iy].push(new Tile(id, ix*tsize-offx, iy*tsize-offy));
-					if (id == 0) screen[l][iy][ix].visible = false;
+					tiles[l][iy].push(new Tile(id, ix*tsize-offx, iy*tsize-offy));
+					if (id == 0) tiles[l][iy][ix].visible = false;
 					
-					tilemap.addTile(screen[l][iy][ix]); //iy*newW+ix
+					tilemap.addTile(tiles[l][iy][ix]);
 				}
 			}
 			
-		} else if (newH < screenH) { //h--
+		} else if (newH < tilesH) { //h--
 			
 			for (l in 0...layersNum)
-			for (iy in newH...screenH)
+			for (iy in newH...tilesH)
 				for (ix in 0...newW) {
-					tilemap.removeTile(screen[l][iy][ix]); //iy*newH
+					tilemap.removeTile(tiles[l][iy][ix]);
 				}
 			
 			for (l in 0...layersNum)
-			for (iy in newH...screenH) screen[l].pop();
+			for (iy in newH...tilesH) tiles[l].pop();
 		}
 		
-		screenW = newW;
-		screenH = newH;
+		tilesW = newW;
+		tilesH = newH;
 		tilemap.width = stage.stageWidth;
 		tilemap.height = stage.stageHeight;
 		
 		#if debug
-		trace(screen[0][0].length*screen[0].length, screenW*screenH, tilemap.numTiles);
+		/*debug.graphics.clear();
+		debug.graphics.lineStyle(1, 0xf00000);
+		debug.graphics.drawRect(-camera.x, -camera.y, (newW-2)*tsize, (newH-2)*tsize);*/
+		trace(tiles[0][0].length*tiles[0].length*layersNum,
+			tilesW*tilesH*layersNum, tilemap.numTiles);
 		#end
 	}
 	
 	private static function _rescale(scale:Int):Void {
 		var tileNum = Std.int(origTileset.width / origTsize);
-		trace(tileNum);
 		tsize = origTsize * scale;
 		Lvl.scale = scale;
 		
@@ -237,9 +256,9 @@ class Lvl {
 		_rescale(scale);
 		
 		tilemap.removeTiles();
-		for (l in 0...layersNum) screen[l] = [];
-		screenW = 0;
-		screenH = 0;
+		for (l in 0...layersNum) tiles[l] = [];
+		tilesW = 0;
+		tilesH = 0;
 		
 		resize();
 		update(true);
