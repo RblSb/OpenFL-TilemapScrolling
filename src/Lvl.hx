@@ -28,8 +28,8 @@ typedef GameMap = { //map format
 
 class Lvl {
 	
+	#if debug public static var debug = new Sprite(); #end
 	public static var tilemap:Tilemap;
-	public static var debug = new Sprite();
 	public static var origTileset:BitmapData;
 	public static var origTsize:Int; //for rescaling
 	public static var layersLength:Array<Int>;
@@ -69,16 +69,15 @@ class Lvl {
 		layersNum = layers.length;
 		layersLength = [0];
 		
-		var tileNum = 0;
-		for (l in layers) tileNum += l.length + 1;
+		var tileNum = 1;
+		for (l in layers) tileNum += l.length;
 		origTileset = new BitmapData(tileNum * tsize, tsize, true, 0x0);
 		origTsize = tsize;
-		var offx = 0;
+		var offx = tsize;
 		
 		for (l in 0...layersNum) {
 			var layer = layers[l];
-			layersLength.push(layer.length + 1);
-			offx += tsize; //first tile is empty
+			layersLength.push(layer.length);
 			
 			for (tile in layer) {
 				var bmd = Assets.getBitmapData("tiles/"+l+"/"+tile.id+".png");
@@ -109,7 +108,8 @@ class Lvl {
 	
 	public static function getTile(layer:Int, x:Int, y:Int):Int {
 		if (x > -1 && y > -1 && x < map.w && y < map.h) {
-			return map.layers[layer][y][x] + layersLength[layer];
+			var id = map.layers[layer][y][x];
+			return id == 0 ? 0 : id + layersLength[layer];
 		}
 		return 0;
 	}
@@ -176,7 +176,7 @@ class Lvl {
 					tiles[l][iy].push(new Tile(id, ix*tsize-offx, iy*tsize-offy));
 					if (id == 0) tiles[l][iy][ix].visible = false;
 					
-					tilemap.addTile(tiles[l][iy][ix]); //iy*tilesH+ix
+					tilemap.addTile(tiles[l][iy][ix]);
 				}
 			
 		} else if (newW < tilesW) { //w--
@@ -184,7 +184,7 @@ class Lvl {
 			for (l in 0...layersNum)
 			for (ix in newW...tilesW)
 				for (iy in 0...tilesH) { //for old h
-					tilemap.removeTile(tiles[l][iy][ix]); //iy*tilesH+newW
+					tilemap.removeTile(tiles[l][iy][ix]);
 				}
 			
 			for (l in 0...layersNum)
