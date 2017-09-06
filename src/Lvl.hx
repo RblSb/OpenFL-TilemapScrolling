@@ -28,29 +28,29 @@ typedef GameMap = { //map format
 
 class Lvl {
 	
-	#if debug public static var debug = new Sprite(); #end
-	public static var tilemap:Tilemap;
-	public static var origTileset:BitmapData;
-	public static var origTsize:Int; //for rescaling
-	public static var layersLength:Array<Int>;
-	public static var layersNum:Int;
-	public static var map:GameMap;
+	#if debug public var debug = new Sprite(); #end
+	public var tilemap:Tilemap;
+	public var origTileset:BitmapData;
+	public var origTsize:Int; //for rescaling
+	public var layersLength:Array<Int>;
+	public var layersNum:Int;
+	public var map:GameMap;
 	
-	public static var tiles:Array<Array<Array<Tile>>> = [];
-	public static var tilesW = 0; //tiles viewport
-	public static var tilesH = 0;
-	public static var screenW = 0; //size in tiles
-	public static var screenH = 0;
-	public static var tsize = 0; //tile size
-	public static var scale = 0; //tile scale
-	public static var camera = {
+	public var tiles:Array<Array<Array<Tile>>> = [];
+	public var tilesW = 0; //tiles viewport
+	public var tilesH = 0;
+	public var screenW = 0; //size in tiles
+	public var screenH = 0;
+	public var tsize = 0; //tile size
+	public var scale = 0; //tile scale
+	public var camera = {
 		x : 0.0, y : 0.0, //current
 		sx : 0.0, sy : 0.0, //saved
 	};
 	
 	public function new() {}
 	
-	public static function init():Void {
+	public function init():Void {
 		initTiles();
 		loadMap(1);
 		resize();
@@ -60,7 +60,7 @@ class Lvl {
 		#end
 	}
 	
-	private static function initTiles():Void {
+	function initTiles():Void {
 		var stage = Lib.current.stage;
 		var text = Assets.getText("res/tiles.json");
 		var json:Tiles = haxe.Json.parse(text);
@@ -98,7 +98,7 @@ class Lvl {
 		#end
 	}
 	
-	private static function loadMap(id:Int):Void {
+	function loadMap(id:Int):Void {
 		var text = Assets.getText("maps/"+id+".json");
 		map = haxe.Json.parse(text);
 		
@@ -106,7 +106,7 @@ class Lvl {
 		for (l in 0...layersNum) tiles[l] = [];
 	}
 	
-	public static function getTile(layer:Int, x:Int, y:Int):Int {
+	public function getTile(layer:Int, x:Int, y:Int):Int {
 		if (x > -1 && y > -1 && x < map.w && y < map.h) {
 			var id = map.layers[layer][y][x];
 			return id == 0 ? 0 : id + layersLength[layer];
@@ -114,13 +114,13 @@ class Lvl {
 		return 0;
 	}
 	
-	public static function setTile(layer:Int, id:Int, x:Int, y:Int):Void {
+	public function setTile(layer:Int, id:Int, x:Int, y:Int):Void {
 		if (x > -1 && y > -1 && x < map.w && y < map.h) {
 			map.layers[layer][y][x] = id + layersLength[layer];
 		}
 	}
 	
-	public static function update(force=false):Void {
+	public function update(force=false):Void {
 		if (camera.x == camera.sx && camera.y == camera.sy && !force) return;
 		//camera in tiles
 		var ctx = Std.int(camera.x/tsize);
@@ -152,7 +152,7 @@ class Lvl {
 		camera.sy = camera.y;
 	}
 	
-	public static function resize():Void {
+	public function resize():Void {
 		var stage = Lib.current.stage; //fix camera resize
 		//new screen size in tiles
 		screenW = Math.ceil(stage.stageWidth/tsize) + 1;
@@ -235,10 +235,10 @@ class Lvl {
 		#end
 	}
 	
-	private static function _rescale(scale:Int):Void {
+	function _rescale(scale:Int):Void {
 		var tileNum = Std.int(origTileset.width / origTsize);
 		tsize = origTsize * scale;
-		Lvl.scale = scale;
+		this.scale = scale;
 		
 		var bmdset = new BitmapData(tileNum * tsize, tsize, true, 0x0);
 		var mat = new Matrix();
@@ -252,7 +252,7 @@ class Lvl {
 		tilemap.tileset = new Tileset(bmdset, rects);
 	}
 	
-	public static function rescale(scale:Int):Void {
+	public function rescale(scale:Int):Void {
 		_rescale(scale);
 		
 		tilemap.removeTiles();

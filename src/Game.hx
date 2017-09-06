@@ -6,33 +6,35 @@ import openfl.Lib;
 
 class Game extends Screen {
 	
+	var lvl:Lvl;
+	
 	public function new() {
 		super();
-		init();
 	}
 	
-	private function init():Void {
-		Lvl.init();
-		addChild(Lvl.tilemap);
+	public function init():Void {
+		lvl = new Lvl();
+		lvl.init();
+		addChild(lvl.tilemap);
 	}
 	
-	private override function onResize():Void {
-		Lvl.resize();
+	override function onResize():Void {
+		lvl.resize();
 	}
 	
 	override function onKeyDown(key:Int):Void {
 		var k = Keyboard;
 		
 		if (key == k.NUMBER_0) {
-			Lvl.rescale(1);
+			lvl.rescale(1);
 		} else if (key == k.MINUS || key == 173) {
-			if (Lvl.scale > 1) Lvl.rescale(Lvl.scale - 1);
+			if (lvl.scale > 1) lvl.rescale(lvl.scale - 1);
 		} else if (key == k.EQUAL) {
-			if (Lvl.scale < 9) Lvl.rescale(Lvl.scale + 1);
+			if (lvl.scale < 9) lvl.rescale(lvl.scale + 1);
 		}
 	}
 	
-	private override function onEnterFrame(e:Event):Void {
+	override function onEnterFrame(e:Event):Void {
 		var k = Keyboard;
 		var sx = 0, sy = 0;
 		
@@ -44,9 +46,9 @@ class Game extends Screen {
 			sx *= 2; sy *= 2;
 		}
 		
-		if (sx != 0) Lvl.camera.x += sx;
-		if (sy != 0) Lvl.camera.y += sy;
+		if (sx != 0) lvl.camera.x += sx;
+		if (sy != 0) lvl.camera.y += sy;
 		
-		Lvl.update();
+		lvl.update();
 	}
 }

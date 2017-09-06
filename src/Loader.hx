@@ -48,6 +48,7 @@ class Loader extends Screen {
 		stage.removeEventListener(Event.COMPLETE, onComplete);
 		
 		var game = new Game();
+		game.init();
 		game.show();
 	}
 }
